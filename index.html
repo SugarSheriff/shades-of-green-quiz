@@ -1029,7 +1029,11 @@
         <p class="results-message" id="resultsMessage"></p>
         
         <div class="results-actions">
-          <button class="btn btn-primary" onclick="retakeQuiz()">
+          <button class="btn btn-primary" onclick="submitToGoogleSheet()" id="submitBtn">
+            <span>📤</span>
+            Submit Results
+          </button>
+          <button class="btn btn-secondary" onclick="retakeQuiz()">
             <span>🔄</span>
             Retake Quiz
           </button>
@@ -1050,8 +1054,11 @@
   </div>
 
   <script>
-    // Configuration: Set to true to use local images, false for Google Drive
+    // Configuration
     const USE_LOCAL_IMAGES = true;
+    
+    // Google Sheets Web App URL - Replace with your deployed script URL
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbx3AwX3UBzjy0mpnJw89MQHO-m_PVYmqN8zOeRja92QNYIM3ehn7rOUYttyAwOvFV5R/exec';
     
     // Quiz Data
     const QUESTIONS = [
@@ -1587,7 +1594,73 @@
       localStorage.setItem('quizProgress', JSON.stringify(progress));
     }
 
-    // Save Completion (history)
+    // Submit to Google Sheet
+    async function submitToGoogleSheet() {
+      const btn = document.getElementById('submitBtn');
+      const msg = document.getElementById('submitMessage');
+      
+      // Check if already submitted
+      if (btn.disabled) return;
+      
+      // Check if URL is configured
+      if (GOOGLE_SHEET_URL === 'YOUR_GOOGLE_SCRIPT_URL_HERE') {
+        msg.textContent = '⚠️ Google Sheet URL not configured. Results saved locally only.';
+        msg.className = 'submit-message info show';
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> Submitting...';
+      msg.classList.remove('show');
+      
+      const endTime = new Date();
+      const timeMinutes = Math.round((endTime - startTime) / 60000);
+      const percent = Math.round((score / QUESTIONS.length) * 100);
+      
+      const data = {
+        name: userName,
+        score: score,
+        total: QUESTIONS.length,
+        percentage: percent,
+        timeMinutes: timeMinutes || 1,
+        correct: score,
+        incorrect: QUESTIONS.length - score
+      };
+      
+      try {
+        const response = await fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors', // Required for Google Apps Script
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+        
+        // With no-cors, we can't read the response, but if no error, assume success
+        msg.textContent = '✅ Results submitted successfully!';
+        msg.className = 'submit-message success show';
+        btn.innerHTML = '<span>✓</span> Submitted';
+        
+        // Save locally as backup
+        saveCompletion(percent, timeMinutes);
+        
+      } catch (error) {
+        console.error('Submit error:', error);
+        msg.textContent = '❌ Failed to submit. Results saved locally.';
+        msg.className = 'submit-message show';
+        msg.style.background = 'linear-gradient(135deg, #ffebee, #ffcdd2)';
+        msg.style.color = '#b71c1c';
+        msg.style.borderColor = '#c44536';
+        btn.disabled = false;
+        btn.innerHTML = '<span>📤</span> Retry Submit';
+        
+        // Save locally as backup
+        saveCompletion(percent, timeMinutes);
+      }
+    }
+
+    // Save Completion (local backup)
     function saveCompletion(percent, timeMinutes) {
       const completions = JSON.parse(localStorage.getItem('quizCompletions') || '[]');
       completions.push({
@@ -1599,11 +1672,6 @@
         date: new Date().toISOString()
       });
       localStorage.setItem('quizCompletions', JSON.stringify(completions));
-      
-      // Show confirmation
-      const msg = document.getElementById('submitMessage');
-      msg.textContent = '✅ Your results have been saved locally. Share this quiz with others!';
-      msg.className = 'submit-message info show';
     }
   </script>
 </body>
