@@ -1,8 +1,6 @@
 # Shades of Green Quiz 🌱♻️
 
-A beautiful, interactive quiz about waste sorting and recycling. Test your knowledge about proper waste disposal and learn to make a positive environmental impact!
-
-![Quiz Preview](preview.png)
+An interactive quiz about waste sorting and recycling. Test your knowledge about proper waste disposal and learn to make a positive environmental impact!
 
 ## Features
 
